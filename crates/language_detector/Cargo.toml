@@ -1,0 +1,50 @@
+[package]
+name = "language_detector"
+version = "0.1.0"
+edition.workspace = true
+publish.workspace = true
+license = "GPL-3.0-or-later"
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/language_detector.rs"
+
+[features]
+magika = ["dep:magika", "dep:ort"]
+
+[dependencies]
+anyhow.workspace = true
+futures.workspace = true
+gpui.workspace = true
+language.workspace = true
+streaming-iterator.workspace = true
+magika = { version = "1.0.0", optional = true }
+ort = { version = "=2.0.0-rc.10", features = ["download-binaries"], optional = true }
+
+[dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }
+language = { workspace = true, features = ["test-support"] }
+languages = { workspace = true, features = ["test-support"] }
+criterion.workspace = true
+ctor.workspace = true
+tree-sitter-bash.workspace = true
+tree-sitter-c.workspace = true
+tree-sitter-cpp.workspace = true
+tree-sitter-css.workspace = true
+tree-sitter-diff.workspace = true
+tree-sitter-go.workspace = true
+tree-sitter-json.workspace = true
+tree-sitter-md.workspace = true
+tree-sitter-python.workspace = true
+tree-sitter-rust.workspace = true
+tree-sitter-typescript.workspace = true
+tree-sitter-yaml.workspace = true
+
+[[bench]]
+name = "detection_benchmark"
+harness = false
+
+[package.metadata.cargo-machete]
+ignored = ["ort"]

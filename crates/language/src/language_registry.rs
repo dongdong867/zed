@@ -614,6 +614,22 @@ impl LanguageRegistry {
         result
     }
 
+    /// Returns all fully-loaded languages that have a tree-sitter grammar.
+    /// These can be used for scoring-based language detection without any I/O.
+    pub fn loaded_languages_with_grammars(&self) -> Vec<Arc<Language>> {
+         self.state
+             .read()
+             .languages
+             .iter()
+             .filter(|language| {
+                 language.grammar().is_some()
+                     && !language.config.hidden
+                     && !language.config.matcher.path_suffixes.is_empty()
+             })
+             .cloned()
+             .collect()
+     }
+
     /// Add a pre-loaded language to the registry.
     pub fn add(&self, language: Arc<Language>) {
         let mut state = self.state.write();

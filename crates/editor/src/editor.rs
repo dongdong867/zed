@@ -72,6 +72,7 @@ pub use git::blame::BlameRenderer;
 pub use hover_popover::hover_markdown_style;
 pub use inlays::Inlay;
 pub use items::MAX_TAB_TITLE_LEN;
+use language_detector::LanguageDetector;
 pub use linked_editing_ranges::LinkedEdits;
 pub use lsp::CompletionContext;
 pub use lsp_ext::lsp_tasks;
@@ -1328,6 +1329,7 @@ pub struct Editor {
     sticky_headers_task: Task<()>,
     sticky_headers: Option<Vec<OutlineItem<Anchor>>>,
     pub(crate) colorize_brackets_task: Task<()>,
+    language_detector: Option<LanguageDetector>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -2578,6 +2580,7 @@ impl Editor {
             sticky_headers_task: Task::ready(()),
             sticky_headers: None,
             colorize_brackets_task: Task::ready(()),
+            language_detector: None,
         };
 
         if is_minimap {
@@ -19010,6 +19013,18 @@ impl Editor {
         })
     }
 
+    fn schedule_language_detection(&mut self, buffer: &Entity<Buffer>, cx: &mut Context<Self>) {
+        let Some(language_registry) = buffer.read(cx).language_registry() else {
+            return;
+        };
+
+        let detector = self
+            .language_detector
+            .get_or_insert_with(|| LanguageDetector::new(language_registry));
+
+        detector.schedule(buffer.clone(), cx);
+    }
+
     pub fn restart_language_server(
         &mut self,
         _: &RestartLanguageServer,
@@ -23747,6 +23762,7 @@ impl Editor {
                 if let Some(buffer) = edited_buffer {
                     if buffer.read(cx).file().is_none() {
                         cx.emit(EditorEvent::TitleChanged);
+                        self.schedule_language_detection(buffer, cx);
                     }
 
                     if self.project.is_some() {
@@ -23881,7 +23897,13 @@ impl Editor {
             multi_buffer::Event::Saved => cx.emit(EditorEvent::Saved),
             multi_buffer::Event::FileHandleChanged
             | multi_buffer::Event::Reloaded
-            | multi_buffer::Event::BufferDiffChanged => cx.emit(EditorEvent::TitleChanged),
+            | multi_buffer::Event::BufferDiffChanged => {
+                if let Some(detector) = &mut self.language_detector {
+                    detector.stop();
+                }
+
+                cx.emit(EditorEvent::TitleChanged)
+            }
             multi_buffer::Event::DiagnosticsUpdated => {
                 self.update_diagnostics_state(window, cx);
             }
